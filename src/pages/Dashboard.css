@@ -485,6 +485,132 @@
   line-height: 1.5;
 }
 
+/* Brokerage Links */
+.brokerage-links {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.links-label {
+  font-size: 13px;
+  color: #6b7280;
+  font-weight: 600;
+}
+
+.links-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.brokerage-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 2px solid #e5e7eb;
+  border-radius: 999px;
+  color: #374151;
+  font-size: 13px;
+  font-weight: 600;
+  background: white;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.brokerage-link:hover {
+  border-color: #667eea;
+  background: #f9fafb;
+}
+
+.link-icon {
+  font-size: 16px;
+}
+
+.links-empty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+/* Dropdown open area */
+.brokerage-open {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.brokerage-select.small {
+  width: 220px;
+  padding: 8px 10px;
+}
+
+.btn-open {
+  padding: 8px 14px;
+  background: #f3f4f6;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-open:hover:not(:disabled) {
+  background: #e5e7eb;
+  border-color: #d1d5db;
+}
+
+.btn-open:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Trade Actions */
+.trade-actions {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: center;
+}
+
+.copy-trade-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.copy-trade-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.copy-trade-button:active {
+  transform: translateY(0);
+}
+
+.copy-icon {
+  font-size: 18px;
+}
+
 /* Comments Section */
 .trade-comments-section {
   margin-top: 16px;
@@ -894,9 +1020,9 @@
 
 .radio-option {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px;
   border: 2px solid #e5e7eb;
   border-radius: 8px;
   cursor: pointer;
@@ -911,8 +1037,10 @@
 .radio-option input[type='radio'] {
   width: 18px;
   height: 18px;
+  margin-top: 2px;
   cursor: pointer;
   accent-color: #667eea;
+  flex-shrink: 0;
 }
 
 .radio-option input[type='radio']:checked {
@@ -922,6 +1050,7 @@
 .radio-option:has(input:checked) {
   border-color: #667eea;
   background: #ede9fe;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
 .input-group {
@@ -962,20 +1091,366 @@
 }
 
 .settings-button {
-  padding: 8px 12px;
+  padding: 10px 20px;
   background: #f3f4f6;
   border: 2px solid #e5e7eb;
   border-radius: 6px;
-  font-size: 20px;
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #666;
+}
+
+.settings-button:hover {
+  background: #667eea;
+  border-color: #667eea;
+  color: white;
+}
+
+/* Modal Sections */
+.modal-section {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 2px solid #e5e7eb;
+}
+
+.modal-section h4 {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.section-header h4 {
+  margin: 0;
+}
+
+/* Quantity Settings */
+.quantity-settings {
+  margin-bottom: 16px;
+}
+
+.radio-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.radio-title {
+  font-weight: 600;
+  color: #333;
+  font-size: 15px;
+}
+
+.radio-description {
+  font-size: 13px;
+  color: #666;
+}
+
+.inline-quantity-input {
+  width: 100px;
+  padding: 6px 10px;
+  border: 2px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+.inline-quantity-input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.percentage-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.percentage-control span {
+  font-size: 13px;
+  color: #666;
+  font-weight: 500;
+}
+
+/* Brokerage Selection */
+.brokerage-selection {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 2px solid #e5e7eb;
+}
+
+.brokerage-selection h4 {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  color: #333;
+}
+
+.no-brokerages {
+  padding: 20px;
+  background: #fef3c7;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.no-brokerages p {
+  margin: 0 0 12px 0;
+  color: #92400e;
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  color: #667eea;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 14px;
+  text-decoration: underline;
+}
+
+.btn-link:hover {
+  color: #764ba2;
+}
+
+.brokerage-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.brokerage-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: white;
+}
+
+.brokerage-option:hover {
+  border-color: #667eea;
+  background: #f9fafb;
+}
+
+.brokerage-option.selected {
+  border-color: #667eea;
+  background: #ede9fe;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.brokerage-option input[type='radio'] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #667eea;
+}
+
+.brokerage-logo {
+  font-size: 24px;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.settings-button:hover {
-  background: #e5e7eb;
+.brokerage-name {
+  font-weight: 600;
+  color: #333;
+  flex: 1;
+}
+
+.btn-approve:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-approve:disabled:hover {
+  transform: none;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+/* Brokerage Management Modal */
+.modal-large {
+  max-width: 600px;
+}
+
+.modal-description {
+  margin: 0 0 20px 0;
+  padding: 12px;
+  background: #f0f9ff;
+  border-left: 3px solid #0284c7;
+  border-radius: 4px;
+  font-size: 14px;
+  color: #0c4a6e;
+}
+
+.brokerage-select {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 500;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.brokerage-select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.brokerage-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.brokerage-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background: #f9fafb;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  transition: all 0.2s;
+}
+
+.brokerage-item:hover {
   border-color: #d1d5db;
-  transform: rotate(90deg);
+  background: white;
+}
+
+.brokerage-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.brokerage-icon {
+  font-size: 28px;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  border-radius: 10px;
+}
+
+.brokerage-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.brokerage-title {
+  font-weight: 600;
+  color: #333;
+  font-size: 15px;
+}
+
+.brokerage-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #666;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #9ca3af;
+}
+
+.status-dot.connected {
+  background: #10b981;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+}
+
+.btn-toggle {
+  padding: 8px 20px;
+  border: 2px solid #e5e7eb;
+  background: white;
+  color: #666;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.btn-toggle:hover {
+  border-color: #667eea;
+  color: #667eea;
+  background: #f9fafb;
+}
+
+.btn-toggle.connected {
+  border-color: #10b981;
+  background: #10b981;
+  color: white;
+}
+
+.btn-toggle.connected:hover {
+  border-color: #059669;
+  background: #059669;
+}
+
+.btn-secondary {
+  padding: 10px 24px;
+  background: white;
+  color: #667eea;
+  border: 2px solid #667eea;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+  background: #667eea;
+  color: white;
+}
+
+.info-box {
+  padding: 12px 16px;
+  background: #fef3c7;
+  border-left: 3px solid #f59e0b;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #92400e;
+  margin-top: 8px;
+}
+
+.info-box strong {
+  color: #78350f;
 }

@@ -32,11 +32,21 @@ interface CopyTradeExecution {
   quantity: number;
   price: number;
   timestamp: string;
+  brokerage: string;
+}
+
+interface Brokerage {
+  id: string;
+  name: string;
+  logo: string;
+  isConnected: boolean;
+  accountBalance?: number;
 }
 
 interface PendingCopyTrade {
   trade: Trade;
   customQuantity: number;
+  selectedBrokerage: string;
 }
 
 // Mock data for generating random new trades
@@ -83,11 +93,7 @@ function Dashboard() {
   const [expandedTradeId, setExpandedTradeId] = useState<number | null>(null);
   const [commentText, setCommentText] = useState<{ [key: number]: string }>({});
 
-  // Copy trading state
-  const [copyTradingEnabled, setCopyTradingEnabled] = useState(() => {
-    const saved = localStorage.getItem('copyTradingEnabled');
-    return saved !== null ? JSON.parse(saved) : false;
-  });
+  // Copy trading state (removed global toggle, now per-trade)
   const [manualApproval, setManualApproval] = useState(() => {
     const saved = localStorage.getItem('manualApproval');
     return saved !== null ? JSON.parse(saved) : true; // Default to true for safety
@@ -111,10 +117,49 @@ function Dashboard() {
   );
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showBrokerageModal, setShowBrokerageModal] = useState(false);
+  const [brokerageSelection, setBrokerageSelection] = useState<{
+    [key: number]: string;
+  }>({});
+
+  // Brokerage state
+  const [brokerages, setBrokerages] = useState<Brokerage[]>(() => {
+    const saved = localStorage.getItem('brokerages');
+    return saved !== null
+      ? JSON.parse(saved)
+      : [
+          {
+            id: 'robinhood',
+            name: 'Robinhood',
+            logo: '🏹',
+            isConnected: false,
+          },
+          { id: 'webull', name: 'Webull', logo: '🐂', isConnected: false },
+          { id: 'fidelity', name: 'Fidelity', logo: '💼', isConnected: false },
+          {
+            id: 'schwab',
+            name: 'Charles Schwab',
+            logo: '🏦',
+            isConnected: false,
+          },
+          { id: 'etrade', name: 'E*TRADE', logo: '📈', isConnected: false },
+          { id: 'td', name: 'TD Ameritrade', logo: '🎯', isConnected: false },
+          {
+            id: 'interactive',
+            name: 'Interactive Brokers',
+            logo: '🌐',
+            isConnected: false,
+          },
+        ];
+  });
+  const [defaultBrokerage, setDefaultBrokerage] = useState<string>(() => {
+    const saved = localStorage.getItem('defaultBrokerage');
+    return saved || '';
+  });
 
   // Store executed copy trades for history/analytics (will be used in future features)
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [executedCopyTrades, setExecutedCopyTrades] = useState<
+  const [_executedCopyTrades, setExecutedCopyTrades] = useState<
     CopyTradeExecution[]
   >([]);
 
@@ -180,9 +225,12 @@ function Dashboard() {
 
   // Execute copy trade
   const executeCopyTrade = useCallback(
-    (trade: Trade, quantity: number) => {
+    (trade: Trade, quantity: number, brokerage: string) => {
       // TODO: Replace with actual broker API call
       // Simulating trade execution
+      const brokerageName =
+        brokerages.find((b) => b.id === brokerage)?.name || 'Unknown';
+
       const execution: CopyTradeExecution = {
         id: Date.now(),
         originalTradeId: trade.id,
@@ -191,6 +239,7 @@ function Dashboard() {
         quantity: quantity,
         price: trade.price,
         timestamp: new Date().toISOString(),
+        brokerage: brokerageName,
       };
 
       setExecutedCopyTrades((prev) => [execution, ...prev]);
@@ -230,17 +279,10 @@ function Dashboard() {
         }, 300);
       }, 5000);
     },
-    [playNotificationSound]
+    [playNotificationSound, brokerages]
   );
 
   // Save copy trading preferences to localStorage
-  useEffect(() => {
-    localStorage.setItem(
-      'copyTradingEnabled',
-      JSON.stringify(copyTradingEnabled)
-    );
-  }, [copyTradingEnabled]);
-
   useEffect(() => {
     localStorage.setItem('manualApproval', JSON.stringify(manualApproval));
   }, [manualApproval]);
@@ -256,6 +298,14 @@ function Dashboard() {
   useEffect(() => {
     localStorage.setItem('quantityPercentage', quantityPercentage.toString());
   }, [quantityPercentage]);
+
+  useEffect(() => {
+    localStorage.setItem('brokerages', JSON.stringify(brokerages));
+  }, [brokerages]);
+
+  useEffect(() => {
+    localStorage.setItem('defaultBrokerage', defaultBrokerage);
+  }, [defaultBrokerage]);
 
   // Initial load of trades
   useEffect(() => {
@@ -379,23 +429,6 @@ function Dashboard() {
         // Play notification sound
         playNotificationSound();
 
-        // Handle copy trading
-        if (copyTradingEnabled) {
-          const copyQty = calculateCopyQuantity(newTrade.quantity);
-
-          if (manualApproval) {
-            // Show approval modal for manual confirmation
-            setPendingTrade({
-              trade: newTrade,
-              customQuantity: copyQty,
-            });
-            setShowApprovalModal(true);
-          } else {
-            // Auto-execute without approval
-            executeCopyTrade(newTrade, copyQty);
-          }
-        }
-
         // Auto-dismiss notification after 5 seconds
         setTimeout(() => {
           setNotifications((prev) =>
@@ -414,14 +447,7 @@ function Dashboard() {
     }, 15000); // Check every 15 seconds
 
     return () => clearInterval(interval);
-  }, [
-    isLoading,
-    playNotificationSound,
-    copyTradingEnabled,
-    executeCopyTrade,
-    manualApproval,
-    calculateCopyQuantity,
-  ]);
+  }, [isLoading, playNotificationSound]);
 
   const handleLogout = () => {
     // TODO: Implement actual logout logic (clear tokens, etc.)
@@ -429,8 +455,12 @@ function Dashboard() {
   };
 
   const handleApproveTrade = () => {
-    if (pendingTrade) {
-      executeCopyTrade(pendingTrade.trade, pendingTrade.customQuantity);
+    if (pendingTrade && pendingTrade.selectedBrokerage) {
+      executeCopyTrade(
+        pendingTrade.trade,
+        pendingTrade.customQuantity,
+        pendingTrade.selectedBrokerage
+      );
       setShowApprovalModal(false);
       setPendingTrade(null);
     }
@@ -439,6 +469,23 @@ function Dashboard() {
   const handleRejectTrade = () => {
     setShowApprovalModal(false);
     setPendingTrade(null);
+  };
+
+  const toggleBrokerageConnection = (brokerageId: string) => {
+    setBrokerages((prev) =>
+      prev.map((b) =>
+        b.id === brokerageId ? { ...b, isConnected: !b.isConnected } : b
+      )
+    );
+  };
+
+  const handleBrokerageSelect = (brokerageId: string) => {
+    if (pendingTrade) {
+      setPendingTrade({
+        ...pendingTrade,
+        selectedBrokerage: brokerageId,
+      });
+    }
   };
 
   const handleAddComment = (tradeId: number) => {
@@ -468,6 +515,16 @@ function Dashboard() {
     setExpandedTradeId((prev) => (prev === tradeId ? null : tradeId));
   };
 
+  const handleCopyTrade = (trade: Trade) => {
+    const copyQty = calculateCopyQuantity(trade.quantity);
+    setPendingTrade({
+      trade: trade,
+      customQuantity: copyQty,
+      selectedBrokerage: defaultBrokerage,
+    });
+    setShowApprovalModal(true);
+  };
+
   const formatTimeAgo = (timestamp: string) => {
     const now = new Date().getTime();
     const tradeTime = new Date(timestamp).getTime();
@@ -495,6 +552,29 @@ function Dashboard() {
     setTimeout(() => {
       setNotifications((prev) => prev.filter((n) => n.id !== id));
     }, 300);
+  };
+
+  // Build external stock page URL for a brokerage
+  const getBrokerageStockUrl = (brokerageId: string, ticker: string) => {
+    const t = encodeURIComponent(ticker.toUpperCase());
+    switch (brokerageId) {
+      case 'robinhood':
+        return `https://robinhood.com/stocks/${t}`;
+      case 'webull':
+        return `https://www.webull.com/quote/nasdaq-${t}`;
+      case 'fidelity':
+        return `https://eresearch.fidelity.com/eresearch/goto/evaluate/snapshot.jhtml?symbols=${t}`;
+      case 'schwab':
+        return `https://www.schwab.com/stock-research/quotes/${t}`;
+      case 'etrade':
+        return `https://us.etrade.com/etx/pm/research/stocks/overview?symbol=${t}`;
+      case 'td':
+        return `https://research.tdameritrade.com/grid/public/research/stocks/summary?symbol=${t}`;
+      case 'interactive':
+        return `https://www.interactivebrokers.com/en/trading/products.php?type=stocks&symbol=${t}`;
+      default:
+        return `https://www.google.com/finance/quote/${t}:NASDAQ`;
+    }
   };
 
   return (
@@ -541,30 +621,13 @@ function Dashboard() {
       <header className='dashboard-header'>
         <h1>TickerTribe</h1>
         <div className='header-actions'>
-          <div className='copy-trading-toggle'>
-            <label className='toggle-label'>
-              <span className='toggle-text'>
-                Copy Trading {copyTradingEnabled ? 'ON' : 'OFF'}
-              </span>
-              <div className='toggle-switch'>
-                <input
-                  type='checkbox'
-                  checked={copyTradingEnabled}
-                  onChange={(e) => setCopyTradingEnabled(e.target.checked)}
-                />
-                <span className='slider'></span>
-              </div>
-            </label>
-          </div>
-          {copyTradingEnabled && (
-            <button
-              className='settings-button'
-              onClick={() => setShowSettingsModal(true)}
-              title='Copy Trading Settings'
-            >
-              ⚙️
-            </button>
-          )}
+          <button
+            className='settings-button'
+            onClick={() => setShowBrokerageModal(true)}
+            title='Manage Brokerages'
+          >
+            🏦 Brokerages
+          </button>
           <button
             className='sound-toggle'
             onClick={() => setSoundEnabled(!soundEnabled)}
@@ -658,6 +721,62 @@ function Dashboard() {
                     </div>
                   )}
 
+                  {/* Open on Brokerage (Dropdown) */}
+                  <div className='brokerage-open'>
+                    <span className='links-label'>Open on:</span>
+                    <select
+                      className='brokerage-select small'
+                      value={brokerageSelection[trade.id] || ''}
+                      onChange={(e) =>
+                        setBrokerageSelection((prev) => ({
+                          ...prev,
+                          [trade.id]: e.target.value,
+                        }))
+                      }
+                    >
+                      <option value='' disabled>
+                        Select brokerage…
+                      </option>
+                      {brokerages.map((b) => (
+                        <option key={b.id} value={b.id}>
+                          {b.logo} {b.name}
+                          {b.isConnected ? '' : ' (not connected)'}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      className='btn-open'
+                      disabled={!brokerageSelection[trade.id]}
+                      onClick={() => {
+                        const id = brokerageSelection[trade.id];
+                        if (!id) return;
+                        const url = getBrokerageStockUrl(id, trade.ticker);
+                        window.open(url, '_blank', 'noreferrer');
+                      }}
+                    >
+                      Open
+                    </button>
+                    <button
+                      className='btn-link'
+                      onClick={() => setShowBrokerageModal(true)}
+                    >
+                      Manage →
+                    </button>
+                  </div>
+
+                  {/* Copy Trade Button */}
+                  {!trade.isCopied && (
+                    <div className='trade-actions'>
+                      <button
+                        className='copy-trade-button'
+                        onClick={() => handleCopyTrade(trade)}
+                      >
+                        <span className='copy-icon'>📋</span>
+                        Copy This Trade
+                      </button>
+                    </div>
+                  )}
+
                   {/* Comments Section */}
                   <div className='trade-comments-section'>
                     {/* Existing Comments (collapsible) */}
@@ -732,9 +851,12 @@ function Dashboard() {
       {/* Copy Trade Approval Modal */}
       {showApprovalModal && pendingTrade && (
         <div className='modal-overlay' onClick={handleRejectTrade}>
-          <div className='modal-content' onClick={(e) => e.stopPropagation()}>
+          <div
+            className='modal-content modal-large'
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className='modal-header'>
-              <h3>Approve Copy Trade?</h3>
+              <h3>Copy Trade: {pendingTrade.trade.ticker}</h3>
               <button className='modal-close' onClick={handleRejectTrade}>
                 ✕
               </button>
@@ -762,17 +884,151 @@ function Dashboard() {
                   </span>
                 </div>
                 <div className='preview-row'>
-                  <span className='preview-label'>Your Quantity:</span>
-                  <span className='preview-value highlight'>
-                    {pendingTrade.customQuantity} shares
-                  </span>
-                </div>
-                <div className='preview-row'>
                   <span className='preview-label'>Price:</span>
                   <span className='preview-value'>
                     {formatCurrency(pendingTrade.trade.price)}
                   </span>
                 </div>
+              </div>
+
+              {/* Quantity Settings */}
+              <div className='modal-section'>
+                <h4>Quantity to Copy</h4>
+                <div className='quantity-settings'>
+                  <div className='radio-group'>
+                    <label className='radio-option'>
+                      <input
+                        type='radio'
+                        name='quantityType'
+                        value='same'
+                        checked={copyQuantityType === 'same'}
+                        onChange={(e) => {
+                          setCopyQuantityType(
+                            e.target.value as 'same' | 'custom' | 'percentage'
+                          );
+                          const newQty = calculateCopyQuantity(
+                            pendingTrade.trade.quantity
+                          );
+                          setPendingTrade({
+                            ...pendingTrade,
+                            customQuantity: newQty,
+                          });
+                        }}
+                      />
+                      <div className='radio-content'>
+                        <span className='radio-title'>Same as Master</span>
+                        <span className='radio-description'>
+                          {pendingTrade.trade.quantity} shares
+                        </span>
+                      </div>
+                    </label>
+                    <label className='radio-option'>
+                      <input
+                        type='radio'
+                        name='quantityType'
+                        value='custom'
+                        checked={copyQuantityType === 'custom'}
+                        onChange={(e) => {
+                          setCopyQuantityType(
+                            e.target.value as 'same' | 'custom' | 'percentage'
+                          );
+                          setPendingTrade({
+                            ...pendingTrade,
+                            customQuantity: customQuantity,
+                          });
+                        }}
+                      />
+                      <div className='radio-content'>
+                        <span className='radio-title'>Custom Amount</span>
+                        {copyQuantityType === 'custom' && (
+                          <input
+                            type='number'
+                            min='1'
+                            value={customQuantity}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value) || 1;
+                              setCustomQuantity(val);
+                              setPendingTrade({
+                                ...pendingTrade,
+                                customQuantity: val,
+                              });
+                            }}
+                            className='inline-quantity-input'
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        )}
+                        {copyQuantityType !== 'custom' && (
+                          <span className='radio-description'>
+                            Fixed quantity
+                          </span>
+                        )}
+                      </div>
+                    </label>
+                    <label className='radio-option'>
+                      <input
+                        type='radio'
+                        name='quantityType'
+                        value='percentage'
+                        checked={copyQuantityType === 'percentage'}
+                        onChange={(e) => {
+                          setCopyQuantityType(
+                            e.target.value as 'same' | 'custom' | 'percentage'
+                          );
+                          const newQty = Math.floor(
+                            (pendingTrade.trade.quantity * quantityPercentage) /
+                              100
+                          );
+                          setPendingTrade({
+                            ...pendingTrade,
+                            customQuantity: newQty,
+                          });
+                        }}
+                      />
+                      <div className='radio-content'>
+                        <span className='radio-title'>Percentage</span>
+                        {copyQuantityType === 'percentage' && (
+                          <div className='percentage-control'>
+                            <input
+                              type='number'
+                              min='1'
+                              max='500'
+                              value={quantityPercentage}
+                              onChange={(e) => {
+                                const val = parseInt(e.target.value) || 100;
+                                setQuantityPercentage(val);
+                                const newQty = Math.floor(
+                                  (pendingTrade.trade.quantity * val) / 100
+                                );
+                                setPendingTrade({
+                                  ...pendingTrade,
+                                  customQuantity: newQty,
+                                });
+                              }}
+                              className='inline-quantity-input'
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                            <span>
+                              % ={' '}
+                              {Math.floor(
+                                (pendingTrade.trade.quantity *
+                                  quantityPercentage) /
+                                  100
+                              )}{' '}
+                              shares
+                            </span>
+                          </div>
+                        )}
+                        {copyQuantityType !== 'percentage' && (
+                          <span className='radio-description'>
+                            Scale up or down
+                          </span>
+                        )}
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Total Cost Display */}
                 <div className='preview-row total-row'>
                   <span className='preview-label'>Total Cost:</span>
                   <span className='preview-value total'>
@@ -782,12 +1038,77 @@ function Dashboard() {
                   </span>
                 </div>
               </div>
+
+              {/* Brokerage Selection */}
+              <div className='modal-section'>
+                <div className='section-header'>
+                  <h4>Select Brokerage</h4>
+                  <button
+                    className='btn-link'
+                    onClick={() => {
+                      setShowApprovalModal(false);
+                      setShowBrokerageModal(true);
+                    }}
+                  >
+                    Manage →
+                  </button>
+                </div>
+                {brokerages.filter((b) => b.isConnected).length === 0 ? (
+                  <div className='no-brokerages'>
+                    <p>No brokerages connected.</p>
+                    <button
+                      className='btn-link'
+                      onClick={() => {
+                        setShowApprovalModal(false);
+                        setShowBrokerageModal(true);
+                      }}
+                    >
+                      Connect a brokerage →
+                    </button>
+                  </div>
+                ) : (
+                  <div className='brokerage-options'>
+                    {brokerages
+                      .filter((b) => b.isConnected)
+                      .map((brokerage) => (
+                        <label
+                          key={brokerage.id}
+                          className={`brokerage-option ${
+                            pendingTrade.selectedBrokerage === brokerage.id
+                              ? 'selected'
+                              : ''
+                          }`}
+                        >
+                          <input
+                            type='radio'
+                            name='brokerage'
+                            value={brokerage.id}
+                            checked={
+                              pendingTrade.selectedBrokerage === brokerage.id
+                            }
+                            onChange={() => handleBrokerageSelect(brokerage.id)}
+                          />
+                          <span className='brokerage-logo'>
+                            {brokerage.logo}
+                          </span>
+                          <span className='brokerage-name'>
+                            {brokerage.name}
+                          </span>
+                        </label>
+                      ))}
+                  </div>
+                )}
+              </div>
             </div>
             <div className='modal-actions'>
               <button className='btn-reject' onClick={handleRejectTrade}>
                 Reject
               </button>
-              <button className='btn-approve' onClick={handleApproveTrade}>
+              <button
+                className='btn-approve'
+                onClick={handleApproveTrade}
+                disabled={!pendingTrade.selectedBrokerage}
+              >
                 Approve & Execute
               </button>
             </div>
@@ -918,10 +1239,127 @@ function Dashboard() {
             </div>
             <div className='modal-actions'>
               <button
+                className='btn-secondary'
+                onClick={() => {
+                  setShowSettingsModal(false);
+                  setShowBrokerageModal(true);
+                }}
+              >
+                Manage Brokerages
+              </button>
+              <button
                 className='btn-primary'
                 onClick={() => setShowSettingsModal(false)}
               >
                 Save Settings
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Brokerage Management Modal */}
+      {showBrokerageModal && (
+        <div
+          className='modal-overlay'
+          onClick={() => setShowBrokerageModal(false)}
+        >
+          <div
+            className='modal-content modal-large'
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className='modal-header'>
+              <h3>Manage Brokerages</h3>
+              <button
+                className='modal-close'
+                onClick={() => setShowBrokerageModal(false)}
+              >
+                ✕
+              </button>
+            </div>
+            <div className='modal-body settings-body'>
+              <p className='modal-description'>
+                Connect your brokerage accounts to execute copy trades. Your
+                credentials are stored securely.
+              </p>
+
+              {/* Default Brokerage */}
+              {brokerages.some((b) => b.isConnected) && (
+                <div className='setting-section'>
+                  <label className='setting-label'>Default Brokerage</label>
+                  <p className='setting-description'>
+                    This brokerage will be used for automatic trades (when
+                    manual approval is off)
+                  </p>
+                  <select
+                    className='brokerage-select'
+                    value={defaultBrokerage}
+                    onChange={(e) => setDefaultBrokerage(e.target.value)}
+                  >
+                    <option value=''>Select default...</option>
+                    {brokerages
+                      .filter((b) => b.isConnected)
+                      .map((b) => (
+                        <option key={b.id} value={b.id}>
+                          {b.logo} {b.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Brokerage List */}
+              <div className='setting-section'>
+                <label className='setting-label'>Available Brokerages</label>
+                <div className='brokerage-list'>
+                  {brokerages.map((brokerage) => (
+                    <div key={brokerage.id} className='brokerage-item'>
+                      <div className='brokerage-info'>
+                        <span className='brokerage-icon'>{brokerage.logo}</span>
+                        <div className='brokerage-details'>
+                          <span className='brokerage-title'>
+                            {brokerage.name}
+                          </span>
+                          <span className='brokerage-status'>
+                            {brokerage.isConnected ? (
+                              <>
+                                <span className='status-dot connected'></span>
+                                Connected
+                              </>
+                            ) : (
+                              <>
+                                <span className='status-dot'></span>
+                                Not Connected
+                              </>
+                            )}
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        className={`btn-toggle ${
+                          brokerage.isConnected ? 'connected' : ''
+                        }`}
+                        onClick={() => toggleBrokerageConnection(brokerage.id)}
+                      >
+                        {brokerage.isConnected ? 'Disconnect' : 'Connect'}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className='info-box'>
+                <strong>Note:</strong> Connections are simulated for demo
+                purposes. In production, this would integrate with actual
+                brokerage APIs (Alpaca, TD Ameritrade, etc.)
+              </div>
+            </div>
+            <div className='modal-actions'>
+              <button
+                className='btn-primary'
+                onClick={() => setShowBrokerageModal(false)}
+              >
+                Done
               </button>
             </div>
           </div>
