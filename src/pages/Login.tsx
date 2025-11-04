@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import './Login.css';
+import { LOGIN_SIMULATION_DELAY } from '../constants/validation';
 
 function Login() {
   const [email, setEmail] = useState('');
@@ -14,13 +15,12 @@ function Login() {
     e.preventDefault();
     setIsLoading(true);
 
-    // TODO: Implement actual authentication logic
-    // For now, simulate a login delay
+    // Note: In production, implement actual authentication with API
+    // This simulates login for demo purposes
     setTimeout(() => {
       setIsLoading(false);
-      // Navigate to dashboard after successful login
       navigate('/dashboard');
-    }, 1000);
+    }, LOGIN_SIMULATION_DELAY);
   };
 
   return (
@@ -76,7 +76,7 @@ function Login() {
             type='button'
             className='forgot-password'
             onClick={() => {
-              // TODO: Implement forgot password functionality
+              // Note: In production, implement password reset flow
               alert('Password reset functionality coming soon!');
             }}
           >

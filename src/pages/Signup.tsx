@@ -2,6 +2,17 @@ import { useState, useCallback, useRef } from 'react';
 import type { FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import './Signup.css';
+import {
+  USERNAME_CHECK_DEBOUNCE,
+  USERNAME_CHECK_DELAY,
+  SIGNUP_SIMULATION_DELAY,
+} from '../constants/validation';
+import { MOCK_TAKEN_USERNAMES } from '../constants/auth';
+import {
+  validateUsername,
+  validatePassword,
+  validatePasswordMatch,
+} from '../utils/validation';
 
 function Signup() {
   const [formData, setFormData] = useState({
@@ -21,7 +32,7 @@ function Signup() {
   const navigate = useNavigate();
   const debounceTimer = useRef<number | null>(null);
 
-  // Simulate checking if username is available
+  // Check username availability (simulated for demo)
   const checkUsernameAvailability = useCallback(async (username: string) => {
     if (username.length === 0) {
       setUsernameStatus('idle');
@@ -30,33 +41,24 @@ function Signup() {
     }
 
     // Username format validation
-    const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
-    if (!usernameRegex.test(username)) {
+    const validation = validateUsername(username);
+    if (!validation.isValid) {
       setUsernameStatus('invalid');
-      setUsernameMessage(
-        'Username must be 3-20 characters (letters, numbers, underscore only)'
-      );
+      setUsernameMessage(validation.error || 'Invalid username');
       return;
     }
 
     setUsernameStatus('checking');
     setUsernameMessage('Checking availability...');
 
-    // TODO: Replace with actual API call
-    // Simulating API call with a delay
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    // Note: In production, this would be an API call to check username
+    await new Promise((resolve) => setTimeout(resolve, USERNAME_CHECK_DELAY));
 
-    // Mock list of taken usernames for demo purposes
-    const takenUsernames = [
-      'admin',
-      'user',
-      'test',
-      'demo',
-      'stockmaster',
-      'trader123',
-    ];
-
-    if (takenUsernames.includes(username.toLowerCase())) {
+    if (
+      MOCK_TAKEN_USERNAMES.includes(
+        username.toLowerCase() as (typeof MOCK_TAKEN_USERNAMES)[number]
+      )
+    ) {
       setUsernameStatus('taken');
       setUsernameMessage('Username is already taken');
     } else {
@@ -80,7 +82,7 @@ function Signup() {
       }
       debounceTimer.current = setTimeout(() => {
         checkUsernameAvailability(value);
-      }, 300);
+      }, USERNAME_CHECK_DEBOUNCE);
     }
   };
 
@@ -94,25 +96,31 @@ function Signup() {
       return;
     }
 
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
+    // Validate password match
+    const passwordMatchValidation = validatePasswordMatch(
+      formData.password,
+      formData.confirmPassword
+    );
+    if (!passwordMatchValidation.isValid) {
+      setError(passwordMatchValidation.error || 'Invalid password');
       return;
     }
 
-    if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters');
+    // Validate password strength
+    const passwordValidation = validatePassword(formData.password);
+    if (!passwordValidation.isValid) {
+      setError(passwordValidation.error || 'Invalid password');
       return;
     }
 
     setIsLoading(true);
 
-    // TODO: Implement actual registration logic
-    // For now, simulate a signup delay
+    // Note: In production, implement actual registration with API
+    // This simulates signup for demo purposes
     setTimeout(() => {
       setIsLoading(false);
-      // Navigate to dashboard after successful signup
       navigate('/dashboard');
-    }, 1000);
+    }, SIGNUP_SIMULATION_DELAY);
   };
 
   return (
